@@ -1,0 +1,5 @@
+{
+  "name": "OppTracker",
+  "description": "A mobile-first job application lifecycle manager with an AI-powered ingestion engine. Features simulated WhatsApp integration for quick capture, automated vetting, and intelligent matching against your user profile.",
+  "requestFramePermissions": []
+}
