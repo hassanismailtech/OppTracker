@@ -4,6 +4,16 @@ import { Opportunity, AppStatus, UserProfile } from "../types";
 // Helper to get today's date for relative deadline parsing
 const getToday = () => new Date().toISOString().split('T')[0];
 
+// 1. SAFE KEY RETRIEVAL FUNCTION
+const getApiKey = () => {
+  // Checks specifically for the Vite environment variable
+  const key = import.meta.env.VITE_GEMINI_API_KEY; 
+  if (!key) {
+    console.error("CRITICAL: VITE_GEMINI_API_KEY is missing!");
+  }
+  return key;
+};
+
 const analysisSchema: Schema = {
   type: Type.OBJECT,
   properties: {
@@ -28,11 +38,12 @@ const matchingSchema: Schema = {
 };
 
 export const analyzeJobText = async (text: string): Promise<any> => {
-  if (!process.env.API_KEY) {
+  const apiKey = getApiKey();
+  if (!apiKey) {
     throw new Error("API Key not found");
   }
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey });
   
   const prompt = `
     You are an expert recruitment vetting agent.
@@ -48,7 +59,7 @@ export const analyzeJobText = async (text: string): Promise<any> => {
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.0-flash", // Updated to a stable model
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -56,7 +67,7 @@ export const analyzeJobText = async (text: string): Promise<any> => {
       },
     });
 
-    return JSON.parse(response.text || "{}");
+    return JSON.parse(response.text() || "{}"); // Fixed .text usage
   } catch (error) {
     console.error("Gemini Analysis Error", error);
     throw error;
@@ -64,9 +75,10 @@ export const analyzeJobText = async (text: string): Promise<any> => {
 };
 
 export const matchProfileToJob = async (user: UserProfile, jobAnalysis: any): Promise<any> => {
-  if (!process.env.API_KEY) return { fitScore: 50, reasoning: "API Key missing" };
+  const apiKey = getApiKey();
+  if (!apiKey) return { fitScore: 50, reasoning: "API Key missing" };
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey });
 
   const prompt = `
     Compare the User Profile against the Job Analysis.
@@ -84,7 +96,7 @@ export const matchProfileToJob = async (user: UserProfile, jobAnalysis: any): Pr
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.0-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -92,7 +104,7 @@ export const matchProfileToJob = async (user: UserProfile, jobAnalysis: any): Pr
       },
     });
 
-    return JSON.parse(response.text || "{}");
+    return JSON.parse(response.text() || "{}");
   } catch (error) {
     console.error("Gemini Matching Error", error);
     return { fitScore: 0, reasoning: "Error calculating fit." };
